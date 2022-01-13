@@ -1,0 +1,42 @@
+const fs = require('fs')
+const YoutubeMp3Downloader = require('youtube-mp3-downloader')
+const { Deepgram } = require('@deepgram/sdk')
+const ffmpeg = require('ffmpeg-static')
+const deepgram = new Deepgram('c236a4d1e3bcb071e1cf331b6ddc8af9e4ca0ef3')
+const YD = new YoutubeMp3Downloader({
+  ffmpegPath: ffmpeg,
+  outputPath: './',
+  youtubeVideoQuality: 'highestaudio',
+})
+YD.download('dQw4w9WgXcQ')
+
+YD.on('progress', (data) => {
+  console.log(data.progress.percentage + '% downloaded')
+})
+
+YD.on('finished', async (err, video) => {
+  const videoFileName = video.file
+  console.log(`Downloaded ${videoFileName}`)
+
+  const file = {
+    buffer: fs.readFileSync(videoFileName),
+    mimetype: 'audio/mp3',
+  }
+  const options = {
+    punctuate: true,
+  }
+  
+  const result = await deepgram.transcription
+    .preRecorded(file, options)
+    .catch((e) => console.log(e))
+  console.log(result)
+  const transcript = result.results.channels[0].alternatives[0].transcript
+  
+  fs.writeFileSync(
+    `${videoFileName}.txt`,
+    transcript,
+    () => `Wrote ${videoFileName}.txt`
+  )
+  
+
+})
